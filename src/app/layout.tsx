@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-dvh bg-slate-50 text-slate-900">
-        <div className="flex min-h-dvh">
+        <div className="min-h-dvh md:flex">
           <Navbar />
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="border-b border-slate-200 bg-white">

@@ -6,6 +6,7 @@ import type { Campaign } from "@/types/campaign";
 import type { CampaignStatus } from "@/types/common";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { BackendErrorPanel } from "@/components/common/BackendErrorPanel";
+import { formatDateTime } from "@/utils/formatters";
 
 type SortKey = "name" | "status" | "budget" | "daily_budget" | "created_at";
 type SortDir = "asc" | "desc";
@@ -145,8 +146,8 @@ export function CampaignsClient({
 
       {apiError ? <BackendErrorPanel error={apiError} /> : null}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="min-w-[900px] w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs text-slate-600">
             <tr>
               <th className="px-4 py-3">ID</th>
@@ -181,12 +182,14 @@ export function CampaignsClient({
                   </td>
                   <td className="px-4 py-3">{c.budget}</td>
                   <td className="px-4 py-3">{c.daily_budget}</td>
-                  <td className="px-4 py-3 text-slate-600">{c.created_at}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {formatDateTime(c.created_at)}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     {c.id ? (
                       <Link
                         href={`/campaigns/${encodeURIComponent(c.id)}`}
-                        className="rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800"
+                        className="inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800 active:scale-[0.99]"
                       >
                         View Insights
                       </Link>
