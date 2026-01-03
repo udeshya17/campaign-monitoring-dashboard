@@ -4,12 +4,12 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { KPIGrid } from "@/components/dashboard/KPIGrid";
 import { CampaignStatusChart } from "@/components/dashboard/CampaignStatusChart";
 import { OverviewActions } from "@/components/dashboard/OverviewActions";
-import { ErrorState } from "@/components/common/ErrorState";
 import { campaignService } from "@/services/campaign.service";
 import { BarChart } from "@/components/charts/BarChart";
+import { BackendErrorPanel } from "@/components/common/BackendErrorPanel";
 
 export default async function DashboardPage() {
-  let errorMessage: string | null = null;
+  let errorPayload: unknown | null = null;
   let insights: Awaited<ReturnType<typeof insightsService.aggregate>>["insights"] | null =
     null;
   let platforms: Record<string, number> = {};
@@ -27,16 +27,18 @@ export default async function DashboardPage() {
       return acc;
     }, {});
   } catch (err) {
-    errorMessage =
-      err instanceof ApiError
-        ? `${err.message}${
-            err.status === 429 && err.retryAfter
-              ? ` (retry after ${err.retryAfter}s)`
-              : ""
-          }`
-        : err instanceof Error
-          ? err.message
-          : "Unknown error";
+    if (err instanceof ApiError) {
+      errorPayload =
+        err.payload ?? {
+          error: "Request failed",
+          message: err.message,
+          status: err.status,
+          path: err.path,
+          retry_after: err.retryAfter,
+        };
+    } else {
+      errorPayload = { error: "Unknown error", details: String(err) };
+    }
   }
 
   return (
@@ -47,8 +49,8 @@ export default async function DashboardPage() {
       />
 
       <div className="mt-6 space-y-6">
-        {errorMessage ? (
-          <ErrorState message={errorMessage} />
+        {errorPayload ? (
+          <BackendErrorPanel error={errorPayload} />
         ) : insights ? (
           <>
             <section>
@@ -81,7 +83,9 @@ export default async function DashboardPage() {
             </section>
           </>
         ) : (
-          <ErrorState message="No insights available." />
+          <BackendErrorPanel
+            error={{ error: "No insights available", status: 500 }}
+          />
         )}
       </div>
     </main>

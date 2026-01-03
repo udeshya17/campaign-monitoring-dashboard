@@ -5,16 +5,66 @@ import { LiveMetricsPanel } from "@/components/insights/LiveMetricsPanel";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { MetricCard } from "@/components/common/MetricCard";
 import { formatCurrency, formatNumber, formatPercent } from "@/utils/formatters";
+import { ApiError } from "@/services/apiClient";
+import { BackendErrorPanel } from "@/components/common/BackendErrorPanel";
 
 export default async function CampaignDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const [campaignRes, insightsRes] = await Promise.all([
-    campaignService.getById(params.id),
-    insightsService.byCampaign(params.id),
-  ]);
+  const { id } = await params;
+
+  if (!id || id === "undefined") {
+    return (
+      <main>
+        <PageHeader title="Campaign Detail" subtitle="Invalid campaign id" />
+        <div className="mt-6">
+          <BackendErrorPanel
+            error={{
+              error: "Bad Request",
+              message: "Campaign id is missing or invalid",
+              status: 400,
+              path: `/campaigns/${id}`,
+            }}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  let campaignRes: Awaited<ReturnType<typeof campaignService.getById>> | null =
+    null;
+  let insightsRes: Awaited<ReturnType<typeof insightsService.byCampaign>> | null =
+    null;
+  let apiErr: ApiError | null = null;
+
+  try {
+    [campaignRes, insightsRes] = await Promise.all([
+      campaignService.getById(id),
+      insightsService.byCampaign(id),
+    ]);
+  } catch (e) {
+    apiErr = e instanceof ApiError ? e : null;
+    return (
+      <main>
+        <PageHeader title="Campaign Detail" subtitle={`ID: ${id}`} />
+        <div className="mt-6">
+          <BackendErrorPanel
+            error={
+              apiErr?.payload ?? {
+                error: "Request failed",
+                message: apiErr?.message ?? "Unknown error",
+                status: apiErr?.status ?? 500,
+                path: apiErr?.path ?? `/campaigns/${id}`,
+                retry_after: apiErr?.retryAfter,
+              }
+            }
+          />
+        </div>
+      </main>
+    );
+  }
 
   const campaign = campaignRes.campaign;
   const insights = insightsRes.insights;

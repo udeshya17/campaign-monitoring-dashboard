@@ -1,29 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Campaign } from "@/types/campaign";
 import type { CampaignStatus } from "@/types/common";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { BackendErrorPanel } from "@/components/common/BackendErrorPanel";
 
 type SortKey = "name" | "status" | "budget" | "daily_budget" | "created_at";
 type SortDir = "asc" | "desc";
-
-function sortValue(c: Campaign, key: SortKey): string | number {
-  switch (key) {
-    case "budget":
-      return c.budget;
-    case "daily_budget":
-      return c.daily_budget;
-    case "created_at":
-      return c.created_at;
-    case "status":
-      return c.status;
-    case "name":
-    default:
-      return c.name;
-  }
-}
 
 export function CampaignsClient({
   initialCampaigns,
@@ -35,34 +20,45 @@ export function CampaignsClient({
   const [platform, setPlatform] = useState<string | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<unknown>(null);
 
   const platforms = useMemo(() => {
     const set = new Set<string>();
-    initialCampaigns.forEach((c) => (c.platforms ?? []).forEach((p) => set.add(p)));
+    initialCampaigns.forEach((c) =>
+      (c.platforms ?? []).forEach((p) => set.add(p)),
+    );
     return Array.from(set).sort();
   }, [initialCampaigns]);
 
-  const filtered = useMemo(() => {
-    const qq = q.trim().toLowerCase();
-    return initialCampaigns
-      .filter((c) => (qq ? c.name.toLowerCase().includes(qq) : true))
-      .filter((c) => (status === "all" ? true : c.status === status))
-      .filter((c) => (platform === "all" ? true : c.platforms?.includes(platform)));
-  }, [initialCampaigns, q, status, platform]);
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      setLoading(true);
+      setApiError(null);
+      try {
+        const params = new URLSearchParams({
+          q,
+          status,
+          platform,
+          sortKey,
+          sortDir,
+        });
+        const r = await fetch(`/api/campaigns?${params.toString()}`, {
+          headers: { Accept: "application/json" },
+        });
+        const json = await r.json();
+        if (!r.ok) throw json;
+        setCampaigns(json.campaigns as Campaign[]);
+      } catch (e) {
+        setApiError(e);
+      } finally {
+        setLoading(false);
+      }
+    }, 500);
 
-  const sorted = useMemo(() => {
-    const copy = [...filtered];
-    copy.sort((a, b) => {
-      const av = sortValue(a, sortKey);
-      const bv = sortValue(b, sortKey);
-      const res =
-        typeof av === "number" && typeof bv === "number"
-          ? av - bv
-          : String(av).localeCompare(String(bv));
-      return sortDir === "asc" ? res : -res;
-    });
-    return copy;
-  }, [filtered, sortKey, sortDir]);
+    return () => clearTimeout(t);
+  }, [q, status, platform, sortKey, sortDir]);
 
   return (
     <div className="space-y-4">
@@ -128,15 +124,19 @@ export function CampaignsClient({
             {sortDir === "asc" ? "Asc" : "Desc"}
           </button>
           <div className="ml-auto text-xs text-slate-600">
-            Showing <span className="font-medium">{sorted.length}</span> results
+            Showing <span className="font-medium">{campaigns.length}</span>{" "}
+            results
           </div>
         </div>
       </div>
+
+      {apiError ? <BackendErrorPanel error={apiError} /> : null}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs text-slate-600">
             <tr>
+              <th className="px-4 py-3">ID</th>
               <th className="px-4 py-3">Campaign Name</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Platform(s)</th>
@@ -147,15 +147,24 @@ export function CampaignsClient({
             </tr>
           </thead>
           <tbody>
-            {sorted.length === 0 ? (
+            {loading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-600" colSpan={7}>
+                <td className="px-4 py-6 text-slate-600" colSpan={8}>
+                  Loading…
+                </td>
+              </tr>
+            ) : campaigns.length === 0 ? (
+              <tr>
+                <td className="px-4 py-6 text-slate-600" colSpan={8}>
                   No campaigns match your filters.
                 </td>
               </tr>
             ) : (
-              sorted.map((c) => (
+              campaigns.map((c) => (
                 <tr key={c.id} className="border-t border-slate-100">
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600">
+                    {c.id ?? "—"}
+                  </td>
                   <td className="px-4 py-3 font-medium">{c.name}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={c.status} />
@@ -167,12 +176,16 @@ export function CampaignsClient({
                   <td className="px-4 py-3">{c.daily_budget}</td>
                   <td className="px-4 py-3 text-slate-600">{c.created_at}</td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/campaigns/${c.id}`}
-                      className="rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800"
-                    >
-                      View Insights
-                    </Link>
+                    {c.id ? (
+                      <Link
+                        href={`/campaigns/${encodeURIComponent(c.id)}`}
+                        className="rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800"
+                      >
+                        View Insights
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-slate-500">Missing ID</span>
+                    )}
                   </td>
                 </tr>
               ))
