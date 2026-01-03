@@ -2,7 +2,12 @@
 
 import { envClient } from "@/config/env.client";
 import type { CampaignInsights } from "@/types/insights";
-import { formatCurrency, formatNumber, formatPercent } from "@/utils/formatters";
+import {
+  formatCurrency,
+  formatDateTime,
+  formatNumber,
+  formatPercent,
+} from "@/utils/formatters";
 import { useLiveCampaignInsights } from "@/hooks/useLiveCampaignInsights";
 import { LiveStatusIndicator } from "./LiveStatusIndicator";
 import { Button } from "@/components/common/Button";
@@ -28,7 +33,8 @@ export function LiveMetricsPanel({
     ? `${base}/campaigns/${encodeURIComponent(campaignId)}/insights/stream`
     : null;
 
-  const { live, data, error, lastUpdated, connect } = useLiveCampaignInsights({
+  const { live, connecting, data, error, lastUpdated, connect } =
+    useLiveCampaignInsights({
     url,
     autoConnect: true,
   });
@@ -39,19 +45,32 @@ export function LiveMetricsPanel({
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold">Real-Time Metrics (SSE)</div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-semibold">Real-Time Metrics (SSE)</div>
+            {live ? (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                LIVE
+              </span>
+            ) : (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                OFFLINE
+              </span>
+            )}
+          </div>
           <div className="mt-1 flex items-center gap-3">
-            <LiveStatusIndicator live={live} />
+            <LiveStatusIndicator live={live} connecting={connecting} />
             <div className="text-xs text-slate-600">
               Last updated:{" "}
-              <span className="font-medium">{lastUpdated ?? d.timestamp}</span>
+              <span className="font-medium">
+                {formatDateTime(lastUpdated ?? d.timestamp)}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button type="button" onClick={() => connect()}>
-            Reconnect
+          <Button type="button" onClick={() => connect()} disabled={connecting}>
+            {connecting ? "Connecting…" : "Reconnect"}
           </Button>
         </div>
       </div>

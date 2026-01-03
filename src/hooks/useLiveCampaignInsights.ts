@@ -11,6 +11,7 @@ export function useLiveCampaignInsights(args: {
   const esRef = useRef<EventSource | null>(null);
 
   const [live, setLive] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [data, setData] = useState<CampaignInsights | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -19,29 +20,44 @@ export function useLiveCampaignInsights(args: {
     esRef.current?.close();
     esRef.current = null;
     setLive(false);
+    setConnecting(false);
   }, []);
 
   const connect = useCallback(() => {
-    if (!url) return;
+    if (!url) {
+      setError("Missing NEXT_PUBLIC_API_BASE_URL (needed for SSE in browser).");
+      setLive(false);
+      setConnecting(false);
+      return;
+    }
     disconnect();
 
+    setConnecting(true);
     setError(null);
     const es = new EventSource(url);
     esRef.current = es;
 
-    es.onopen = () => setLive(true);
+    es.onopen = () => {
+      setLive(true);
+      setConnecting(false);
+      setError(null);
+    };
     es.onmessage = (evt) => {
       try {
         const parsed = JSON.parse(evt.data) as CampaignInsights;
         setData(parsed);
         setLastUpdated(parsed.timestamp ?? new Date().toISOString());
         setLive(true);
+        setConnecting(false);
+        setError(null);
       } catch {
         setError("Failed to parse live metrics event.");
+        setConnecting(false);
       }
     };
     es.onerror = () => {
       setLive(false);
+      setConnecting(false);
       setError("Live stream disconnected. Retrying…");
       // Let EventSource auto-reconnect; we keep state to show offline momentarily.
     };
@@ -54,6 +70,6 @@ export function useLiveCampaignInsights(args: {
     return () => disconnect();
   }, [autoConnect, connect, disconnect, url]);
 
-  return { live, data, error, lastUpdated, connect, disconnect };
+  return { live, connecting, data, error, lastUpdated, connect, disconnect };
 }
 

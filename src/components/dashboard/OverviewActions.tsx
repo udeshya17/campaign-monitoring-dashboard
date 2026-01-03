@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RefreshButton } from "@/components/common/RefreshButton";
+import { formatDateTime } from "@/utils/formatters";
 
 export function OverviewActions({ lastUpdated }: { lastUpdated: string }) {
   return (
@@ -16,7 +17,8 @@ export function OverviewActions({ lastUpdated }: { lastUpdated: string }) {
         </Link>
         <RefreshButton />
         <div className="ml-auto text-xs text-slate-600">
-          Last updated: <span className="font-medium">{lastUpdated}</span>
+          Last updated:{" "}
+          <span className="font-medium">{formatDateTime(lastUpdated)}</span>
         </div>
       </div>
     </div>
