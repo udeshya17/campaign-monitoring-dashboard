@@ -13,7 +13,6 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatPercent(value: number): string {
-  // API gives 4.29 meaning 4.29%
   return `${value.toFixed(2)}%`;
 }
 

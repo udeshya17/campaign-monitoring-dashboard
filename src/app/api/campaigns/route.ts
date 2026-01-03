@@ -47,7 +47,6 @@ async function getCampaigns(): Promise<{
     try {
       payload = JSON.parse(text) as unknown;
     } catch {
-      // leave payload as raw text
     }
     return Response.json(payload, { status: r.status }) as never;
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Campaign } from "@/types/campaign";
 import type { CampaignStatus } from "@/types/common";
@@ -23,6 +23,7 @@ export function CampaignsClient({
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<unknown>(null);
+  const didMount = useRef(false);
 
   const platforms = useMemo(() => {
     const set = new Set<string>();
@@ -33,6 +34,12 @@ export function CampaignsClient({
   }, [initialCampaigns]);
 
   useEffect(() => {
+    // We already have server data on first render. Only fetch when the user changes filters.
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+
     const t = setTimeout(async () => {
       setLoading(true);
       setApiError(null);
@@ -126,6 +133,12 @@ export function CampaignsClient({
           <div className="ml-auto text-xs text-slate-600">
             Showing <span className="font-medium">{campaigns.length}</span>{" "}
             results
+            {loading ? (
+              <span className="ml-2 inline-flex items-center gap-2 text-slate-500">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+                Updating…
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -147,13 +160,7 @@ export function CampaignsClient({
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td className="px-4 py-6 text-slate-600" colSpan={8}>
-                  Loading…
-                </td>
-              </tr>
-            ) : campaigns.length === 0 ? (
+            {campaigns.length === 0 ? (
               <tr>
                 <td className="px-4 py-6 text-slate-600" colSpan={8}>
                   No campaigns match your filters.

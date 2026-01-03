@@ -59,7 +59,6 @@ export function useLiveCampaignInsights(args: {
       setLive(false);
       setConnecting(false);
       setError("Live stream disconnected. Retrying…");
-      // Let EventSource auto-reconnect; we keep state to show offline momentarily.
     };
   }, [disconnect, url]);
 
