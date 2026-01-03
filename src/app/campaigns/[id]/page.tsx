@@ -6,12 +6,12 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { MetricCard } from "@/components/common/MetricCard";
 import {
   formatCurrency,
-  formatDateTime,
   formatNumber,
   formatPercent,
 } from "@/utils/formatters";
 import { ApiError } from "@/services/apiClient";
 import { BackendErrorPanel } from "@/components/common/BackendErrorPanel";
+import { DateTimeText } from "@/components/common/DateTimeText";
 
 export default async function CampaignDetailPage({
   params,
@@ -95,7 +95,9 @@ export default async function CampaignDetailPage({
           </div>
           <div>
             <div className="text-xs text-slate-500">Created At</div>
-            <div className="font-medium">{formatDateTime(campaign.created_at)}</div>
+            <div className="font-medium">
+              <DateTimeText iso={campaign.created_at} />
+            </div>
           </div>
         </div>
       </section>
